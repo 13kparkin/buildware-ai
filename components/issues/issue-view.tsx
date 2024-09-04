@@ -38,6 +38,7 @@ import { SelectIssue, SelectIssueMessage, SelectProject } from "@/db/schema"
 import { buildCodeGenPrompt } from "@/lib/ai/build-codegen-prompt"
 import { buildCodePlanPrompt } from "@/lib/ai/build-plan-prompt"
 import { parseAIResponse } from "@/lib/ai/parse-ai-response"
+import { generateBranchName } from "@/lib/utils/branch-utils"
 import { Loader2, Pencil, Play, RefreshCw, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useEffect, useRef, useState } from "react"
@@ -197,7 +198,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
       const parsedAIResponse = parseAIResponse(aiCodeGenResponse)
 
       const { prLink, branchName } = await generatePR(
-        issue.name.replace(/\s+/g, "-"),
+        generateBranchName(project.name, issue.name),
         project,
         parsedAIResponse
       )
