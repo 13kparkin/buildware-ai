@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { GitDiff, ParsedDiff } from '@/types/github';
+import { ParsedDiff } from '@/types/github';
 import { parseDiff } from '@/lib/utils/diff-utils';
 
 const anthropic = new Anthropic();
