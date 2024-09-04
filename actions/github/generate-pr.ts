@@ -3,6 +3,7 @@
 import { getAuthenticatedOctokit } from "@/actions/github/auth"
 import { SelectProject } from "@/db/schema"
 import { AIParsedResponse } from "@/types/ai"
+import { generateBranchName } from "@/lib/utils/branch-utils"
 
 function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
   // Check for indicators of change type in the parsed response
@@ -46,7 +47,7 @@ export async function generatePR(
   // Create a new branch
   const baseBranch = project.githubTargetBranch || "main"
   const timestamp = Date.now()
-  let newBranch = `buildware-ai/${branchName}/${timestamp}`
+  let newBranch = generateBranchName(project.name, branchName, timestamp)
   let baseRef: any
 
   try {
@@ -64,7 +65,7 @@ export async function generatePR(
     })
   } catch (error: any) {
     if (error.status === 422) {
-      const retryBranch = `buildware-ai/${branchName}/${timestamp}-retry`
+      const retryBranch = generateBranchName(project.name, branchName, `${timestamp}-retry`)
       try {
         await octokit.git.createRef({
           owner,
@@ -168,7 +169,7 @@ export async function generatePR(
     const pr = await octokit.pulls.create({
       owner,
       repo,
-      title: generatePRTitle(parsedResponse, branchName), // Use the new function here
+      title: generatePRTitle(parsedResponse, branchName),
       head: newBranch,
       base: baseBranch,
       body: `AI: Update for ${branchName}`
