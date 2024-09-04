@@ -1,33 +1,47 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ParsedDiff } from '@/types/github';
+import { AIParsedResponse } from "@/types/ai";
 import { parseDiff } from '@/lib/utils/diff-utils';
+import { BUILDWARE_MAX_OUTPUT_TOKENS } from "@/lib/constants/buildware-config"
 
 const anthropic = new Anthropic();
 
-export async function generateCommitComment(diff: string, anthropicApiKey: string): Promise<string> {
+export async function generateCommitComment(changes: AIParsedResponse, anthropicApiKey: string): Promise<string> {
   try {
-    const parsedDiff: ParsedDiff = parseDiff(diff);
-    const prompt = constructPrompt(parsedDiff);
+    const prompt = constructPrompt(changes);
 
-    const response = await anthropic.completions.create({
+    console.log('changes:', JSON.stringify(changes, null, 2));
+    console.log('prompt:', prompt);
+
+    const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20240620",
-      prompt: prompt,
-      max_tokens_to_sample: 500,
+      max_tokens: BUILDWARE_MAX_OUTPUT_TOKENS,
       temperature: 0.7,
+      messages: [
+        { role: "user", content: prompt }
+      ]
     });
 
-    return formatCommitMessage(response.completion);
+    const content = response.content[0];
+    if (content.type === 'text') {
+      return formatCommitMessage(content.text);
+    } else {
+      throw new Error('Unexpected response content type');
+    }
   } catch (error) {
     console.error('Error generating commit comment:', error);
-    throw new Error('Failed to generate commit comment');
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw new Error('Failed to generate commit comment: ' + (error instanceof Error ? error.message : String(error)));
   }
 }
 
-function constructPrompt(parsedDiff: ParsedDiff): string {
+function constructPrompt(changes: AIParsedResponse): string {
   return `
-Analyze the following git diff and generate a comprehensive commit message:
+Analyze the following changes and generate a comprehensive commit message:
 
-${JSON.stringify(parsedDiff, null, 2)}
+${JSON.stringify(changes, null, 2)}
 
 Please provide:
 1. A brief summary of the overall change

@@ -147,13 +147,7 @@ export async function generatePR(
   })
 
   // Generate AI-powered commit message
-  const diff = await octokit.repos.compareCommits({
-    owner,
-    repo,
-    base: baseBranch,
-    head: newBranch
-  });
-  const commitMessage = await generateCommitComment(JSON.stringify(diff.data), process.env.ANTHROPIC_API_KEY!);
+  const commitMessage = await generateCommitComment(parsedResponse, process.env.ANTHROPIC_API_KEY!);
 
   // Create a commit
   const { data: commit } = await octokit.git.createCommit({
