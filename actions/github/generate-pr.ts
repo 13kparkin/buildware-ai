@@ -4,39 +4,40 @@ import { getAuthenticatedOctokit } from "@/actions/github/auth"
 import { SelectProject } from "@/db/schema"
 import { AIParsedResponse } from "@/types/ai"
 import { generateBranchName } from "@/lib/utils/branch-utils"
+import { generateCommitComment } from "./generate-commit-comment"
 
 function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
-  // If a custom PR title is provided, return it without modification
-  if (parsedResponse.prTitle) {
-    return parsedResponse.prTitle;
-  }
-
-  // Check for indicators of change type in the parsed response
-  const isFeature = parsedResponse.files.some(file => 
-    file.content.toLowerCase().includes('new feature') || 
-    file.content.toLowerCase().includes('enhancement')
-  );
-  const isBugFix = parsedResponse.files.some(file => 
-    file.content.toLowerCase().includes('bug fix') || 
-    file.content.toLowerCase().includes('fixes issue')
-  );
-
-  let prefix = 'update:'; // Default prefix
-
-  if (isFeature) {
-    prefix = 'feature:';
-  } else if (isBugFix) {
-    prefix = 'bug:';
-  } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('docs'))) {
-    prefix = 'docs:';
-  } else if (parsedResponse.files.some(file => file.content.toLowerCase().includes('refactor'))) {
-    prefix = 'refactor:';
-  } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('test'))) {
-    prefix = 'test:';
-  }
-
-  // Generate a generic title if no custom title is provided
-  return `${prefix} Update for ${branchName}`;
+    // If a custom PR title is provided, return it without modification
+    if (parsedResponse.prTitle) {
+      return parsedResponse.prTitle;
+    }
+  
+    // Check for indicators of change type in the parsed response
+    const isFeature = parsedResponse.files.some(file => 
+      file.content.toLowerCase().includes('new feature') || 
+      file.content.toLowerCase().includes('enhancement')
+    );
+    const isBugFix = parsedResponse.files.some(file => 
+      file.content.toLowerCase().includes('bug fix') || 
+      file.content.toLowerCase().includes('fixes issue')
+    );
+  
+    let prefix = 'update:'; // Default prefix
+  
+    if (isFeature) {
+      prefix = 'feature:';
+    } else if (isBugFix) {
+      prefix = 'bug:';
+    } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('docs'))) {
+      prefix = 'docs:';
+    } else if (parsedResponse.files.some(file => file.content.toLowerCase().includes('refactor'))) {
+      prefix = 'refactor:';
+    } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('test'))) {
+      prefix = 'test:';
+    }
+  
+    // Generate a generic title if no custom title is provided
+    return `${prefix} Update for ${branchName}`;
 }
 
 export async function generatePR(
@@ -145,11 +146,20 @@ export async function generatePR(
     tree: changes
   })
 
+  // Generate AI-powered commit message
+  const diff = await octokit.repos.compareCommits({
+    owner,
+    repo,
+    base: baseBranch,
+    head: newBranch
+  });
+  const commitMessage = await generateCommitComment(JSON.stringify(diff.data), process.env.ANTHROPIC_API_KEY!);
+
   // Create a commit
   const { data: commit } = await octokit.git.createCommit({
     owner,
     repo,
-    message: `Update multiple files`,
+    message: commitMessage,
     tree: tree.sha,
     parents: [baseRef.data.object.sha]
   })
@@ -175,7 +185,7 @@ export async function generatePR(
       title: generatePRTitle(parsedResponse, branchName),
       head: newBranch,
       base: baseBranch,
-      body: `Update for ${branchName}`
+      body: commitMessage
     })
 
     return { prLink: pr.data.html_url, branchName: newBranch }
