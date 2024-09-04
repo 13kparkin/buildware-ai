@@ -6,6 +6,11 @@ import { AIParsedResponse } from "@/types/ai"
 import { generateBranchName } from "@/lib/utils/branch-utils"
 
 function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
+  // If a custom PR title is provided, return it without modification
+  if (parsedResponse.prTitle) {
+    return parsedResponse.prTitle;
+  }
+
   // Check for indicators of change type in the parsed response
   const isFeature = parsedResponse.files.some(file => 
     file.content.toLowerCase().includes('new feature') || 
@@ -30,10 +35,8 @@ function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): 
     prefix = 'test:';
   }
 
-  // Use the provided PR title if available, otherwise generate a generic one
-  const title = parsedResponse.prTitle || `Update for ${branchName}`;
-
-  return `${prefix} ${title}`;
+  // Generate a generic title if no custom title is provided
+  return `${prefix} Update for ${branchName}`;
 }
 
 export async function generatePR(
