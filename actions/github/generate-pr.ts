@@ -146,7 +146,7 @@ export async function generatePR(
   const { data: commit } = await octokit.git.createCommit({
     owner,
     repo,
-    message: `AI: Update multiple files`,
+    message: `Update multiple files`,
     tree: tree.sha,
     parents: [baseRef.data.object.sha]
   })
@@ -172,7 +172,7 @@ export async function generatePR(
       title: generatePRTitle(parsedResponse, branchName),
       head: newBranch,
       base: baseBranch,
-      body: `AI: Update for ${branchName}`
+      body: `Update for ${branchName}`
     })
 
     return { prLink: pr.data.html_url, branchName: newBranch }
