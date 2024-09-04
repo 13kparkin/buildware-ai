@@ -4,6 +4,37 @@ import { getAuthenticatedOctokit } from "@/actions/github/auth"
 import { SelectProject } from "@/db/schema"
 import { AIParsedResponse } from "@/types/ai"
 
+function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
+  // Check for indicators of change type in the parsed response
+  const isFeature = parsedResponse.files.some(file => 
+    file.content.toLowerCase().includes('new feature') || 
+    file.content.toLowerCase().includes('enhancement')
+  );
+  const isBugFix = parsedResponse.files.some(file => 
+    file.content.toLowerCase().includes('bug fix') || 
+    file.content.toLowerCase().includes('fixes issue')
+  );
+
+  let prefix = 'update:'; // Default prefix
+
+  if (isFeature) {
+    prefix = 'feature:';
+  } else if (isBugFix) {
+    prefix = 'bug:';
+  } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('docs'))) {
+    prefix = 'docs:';
+  } else if (parsedResponse.files.some(file => file.content.toLowerCase().includes('refactor'))) {
+    prefix = 'refactor:';
+  } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('test'))) {
+    prefix = 'test:';
+  }
+
+  // Use the provided PR title if available, otherwise generate a generic one
+  const title = parsedResponse.prTitle || `Update for ${branchName}`;
+
+  return `${prefix} ${title}`;
+}
+
 export async function generatePR(
   branchName: string,
   project: SelectProject,
@@ -137,7 +168,7 @@ export async function generatePR(
     const pr = await octokit.pulls.create({
       owner,
       repo,
-      title: parsedResponse.prTitle || `AI: Update for ${branchName}`,
+      title: generatePRTitle(parsedResponse, branchName), // Use the new function here
       head: newBranch,
       base: baseBranch,
       body: `AI: Update for ${branchName}`
