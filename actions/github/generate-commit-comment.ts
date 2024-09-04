@@ -49,7 +49,7 @@ Please provide:
 3. Reasoning behind important decisions or approaches taken
 4. Any potential impacts on other parts of the codebase
 
-Format the response as a well-structured git commit message.
+Format the response as a well-structured git commit message. Do not include any other text outside of the commit message.
 `;
 }
 
