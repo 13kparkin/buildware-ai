@@ -45,11 +45,8 @@ ${JSON.stringify(changes, null, 2)}
 
 Please provide:
 1. A brief summary of the overall change
-2. Detailed explanations of significant modifications
-3. Reasoning behind important decisions or approaches taken
-4. Any potential impacts on other parts of the codebase
 
-Format the response as a well-structured git commit message. Do not include any other text outside of the commit message.
+Format the response as a well-structured git commit message keeping it concise and to the point. Do not include any other text outside of the commit message.
 `;
 }
 
