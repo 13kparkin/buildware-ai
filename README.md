@@ -6,7 +6,7 @@
 
 ## Planned features
 - Ai chatbot for code reivew (giving the ability to ask questions on pull requests and get the ai to review your own submitted pull requests)
-- Make tweeks to ai generated PR's (Be able to make small changes to ai generated PR's instead of regeneratnig the whole thing)
+- Make tweeks to ai generated PR's (Be able to make small changes to ai generated PR's and not just regenerate the whole thing)
 
 -----------------------------------------------------------------------------------------------------------------------------------------------
 # Buildware
