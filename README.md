@@ -1,10 +1,21 @@
+# This is a forked version of Buildware that I have modified and added features to for my personal workflow. 
+
+## Added features
+- Ai generated commit comments on pull requests that are generated
+- Changed the context window from 100k to 40k due to new claude api limitations
+
+## Planned features
+- Ai chatbot for code reivew (giving the ability to ask questions on pull requests and get the ai to review your own submitted pull requests)
+- Make tweeks to ai generated PR's (Be able to make small changes to ai generated PR's instead of regeneratnig the whole thing)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
 # Buildware
 
 Buildware helps you ship code faster with AI.
 
 Build a code instruction system, give it an issue, and get an AI-generated PR!
 
-Built by [Mckay Wrigley](https://twitter.com/mckaywrigley) and [Tyler Bruno](https://twitter.com/tylerbruno05) at Takeoff AI.
+Originally built by [Mckay Wrigley](https://twitter.com/mckaywrigley) and [Tyler Bruno](https://twitter.com/tylerbruno05) at Takeoff AI.
 
 ## Demo
 
@@ -13,14 +24,6 @@ See the latest demo [here](https://x.com/mckaywrigley/status/1813695460600844362
 ## Sponsor
 
 If you find Buildware useful, please consider [sponsoring](https://github.com/sponsors/mckaywrigley) us to support our open-source work :)
-
-## Updates
-
-Coming soon:
-
-- Advanced version with Linear integration and more
-- Local codebase mode
-- Team support
 
 ## Simple Setup
 
