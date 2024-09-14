@@ -79,6 +79,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
   const [isRunning, setIsRunning] = React.useState(false)
   const [messages, setMessages] = useState<SelectIssueMessage[]>([])
   const [updateType, setUpdateType] = useState<'partial' | 'full'>('full')
+  const [feedback, setFeedback] = useState('')
 
   const sequenceRef = useRef(globalSequence)
 
@@ -200,7 +201,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
       const parsedAIResponse = parseAIResponse(aiCodeGenResponse)
 
       const { prLink, branchName } = await generatePR(
-        generateBranchName(project.name, issue.name),
+        generateBranchName(project.name, issue.name.slice(0, 256)),
         project,
         parsedAIResponse,
         updateType,
@@ -239,13 +240,13 @@ export const IssueView: React.FC<IssueViewProps> = ({
     await handleRun(issue)
   }
 
-  const handleFeedback = async (feedback: string) => {
+  const handleFeedback = async (feedbackText: string) => {
     setIsRunning(true)
     try {
-      const feedbackAnalysis = await analyzeFeedback(feedback)
+      const feedbackAnalysis = await analyzeFeedback(feedbackText)
       const updatedPlanMessage = await addMessage("Updating plan based on feedback...")
 
-      const embeddingsQueryText = `${item.name} ${item.content} ${feedback}`
+      const embeddingsQueryText = `${item.name} ${item.content} ${feedbackText}`
       const codebaseFiles = await getMostSimilarEmbeddedFiles(embeddingsQueryText, project.id)
 
       const instructionsContext = attachedInstructions
@@ -255,7 +256,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
       const updatedCodeplanPrompt = await buildCodePlanPrompt({
         issue: {
           name: item.name,
-          description: `${item.content}\n\nFeedback: ${feedback}\n\nAnalysis: ${feedbackAnalysis}`
+          description: `${item.content}\n\nFeedback: ${feedbackText}\n\nAnalysis: ${feedbackAnalysis}`
         },
         codebaseFiles: codebaseFiles.map(file => ({
           path: file.path,
@@ -425,6 +426,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
           className="w-full p-2 border rounded"
           rows={4}
           placeholder="Enter your feedback here..."
+          value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
         ></textarea>
         <Button
