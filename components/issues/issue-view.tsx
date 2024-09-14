@@ -39,6 +39,7 @@ import { buildCodeGenPrompt } from "@/lib/ai/build-codegen-prompt"
 import { buildCodePlanPrompt } from "@/lib/ai/build-plan-prompt"
 import { parseAIResponse } from "@/lib/ai/parse-ai-response"
 import { generateBranchName } from "@/lib/utils/branch-utils"
+import { analyzeFeedback } from "@/lib/ai/analyze-feedback"
 import { Loader2, Pencil, Play, RefreshCw, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useEffect, useRef, useState } from "react"
@@ -77,6 +78,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
   } | null>(null)
   const [isRunning, setIsRunning] = React.useState(false)
   const [messages, setMessages] = useState<SelectIssueMessage[]>([])
+  const [updateType, setUpdateType] = useState<'partial' | 'full'>('full')
 
   const sequenceRef = useRef(globalSequence)
 
@@ -200,7 +202,9 @@ export const IssueView: React.FC<IssueViewProps> = ({
       const { prLink, branchName } = await generatePR(
         generateBranchName(project.name, issue.name),
         project,
-        parsedAIResponse
+        parsedAIResponse,
+        updateType,
+        issue.prLink ? parseInt(issue.prLink.split('/').pop()!) : undefined
       )
 
       await updateIssue(issue.id, {
@@ -233,6 +237,45 @@ export const IssueView: React.FC<IssueViewProps> = ({
       status: "ready"
     })
     await handleRun(issue)
+  }
+
+  const handleFeedback = async (feedback: string) => {
+    setIsRunning(true)
+    try {
+      const feedbackAnalysis = await analyzeFeedback(feedback)
+      const updatedPlanMessage = await addMessage("Updating plan based on feedback...")
+
+      const embeddingsQueryText = `${item.name} ${item.content} ${feedback}`
+      const codebaseFiles = await getMostSimilarEmbeddedFiles(embeddingsQueryText, project.id)
+
+      const instructionsContext = attachedInstructions
+        .map(({ instruction }) => `<instruction name="${instruction.name}">\n${instruction.content}\n</instruction>`)
+        .join("\n\n")
+
+      const updatedCodeplanPrompt = await buildCodePlanPrompt({
+        issue: {
+          name: item.name,
+          description: `${item.content}\n\nFeedback: ${feedback}\n\nAnalysis: ${feedbackAnalysis}`
+        },
+        codebaseFiles: codebaseFiles.map(file => ({
+          path: file.path,
+          content: file.content ?? ""
+        })),
+        instructionsContext
+      })
+
+      const aiUpdatedCodePlanResponse = await generateAIResponse([
+        { role: "user", content: updatedCodeplanPrompt }
+      ])
+
+      await updateMessage(updatedPlanMessage.id, aiUpdatedCodePlanResponse)
+      await handleRun(item)
+    } catch (error) {
+      console.error("Failed to process feedback:", error)
+      await addMessage(`Error: Failed to process feedback: ${error}`)
+    } finally {
+      setIsRunning(false)
+    }
   }
 
   return (
@@ -308,6 +351,15 @@ export const IssueView: React.FC<IssueViewProps> = ({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <select
+          value={updateType}
+          onChange={(e) => setUpdateType(e.target.value as 'partial' | 'full')}
+          className="bg-secondary/50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        >
+          <option value="full">Full Regeneration</option>
+          <option value="partial">Partial Update</option>
+        </select>
       </div>
 
       {attachedInstructions.length > 0 && (
@@ -366,6 +418,24 @@ export const IssueView: React.FC<IssueViewProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Provide Feedback</h3>
+        <textarea
+          className="w-full p-2 border rounded"
+          rows={4}
+          placeholder="Enter your feedback here..."
+          onChange={(e) => setFeedback(e.target.value)}
+        ></textarea>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleFeedback(feedback)}
+          disabled={isRunning || !feedback}
+        >
+          Submit Feedback
+        </Button>
+      </div>
     </CRUDPage>
   )
 }

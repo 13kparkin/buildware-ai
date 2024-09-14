@@ -5,48 +5,21 @@ import { SelectProject } from "@/db/schema"
 import { AIParsedResponse } from "@/types/ai"
 import { generateBranchName } from "@/lib/utils/branch-utils"
 import { generateCommitComment } from "./generate-commit-comment"
-
-function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
-    // If a custom PR title is provided, return it without modification
-    if (parsedResponse.prTitle) {
-      return parsedResponse.prTitle;
-    }
-  
-    // Check for indicators of change type in the parsed response
-    const isFeature = parsedResponse.files.some(file => 
-      file.content.toLowerCase().includes('new feature') || 
-      file.content.toLowerCase().includes('enhancement')
-    );
-    const isBugFix = parsedResponse.files.some(file => 
-      file.content.toLowerCase().includes('bug fix') || 
-      file.content.toLowerCase().includes('fixes issue')
-    );
-  
-    let prefix = 'update:'; // Default prefix
-  
-    if (isFeature) {
-      prefix = 'feature:';
-    } else if (isBugFix) {
-      prefix = 'bug:';
-    } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('docs'))) {
-      prefix = 'docs:';
-    } else if (parsedResponse.files.some(file => file.content.toLowerCase().includes('refactor'))) {
-      prefix = 'refactor:';
-    } else if (parsedResponse.files.some(file => file.path.toLowerCase().includes('test'))) {
-      prefix = 'test:';
-    }
-  
-    // Generate a generic title if no custom title is provided
-    return `${prefix} Update for ${branchName}`;
-}
+import { updatePR } from "./update-pr"
 
 export async function generatePR(
   branchName: string,
   project: SelectProject,
-  parsedResponse: AIParsedResponse
+  parsedResponse: AIParsedResponse,
+  updateType: 'partial' | 'full' = 'full',
+  existingPRNumber?: number
 ): Promise<{ prLink: string | null; branchName: string }> {
   const octokit = await getAuthenticatedOctokit(project.githubInstallationId!)
   const [owner, repo] = project.githubRepoFullName!.split("/")
+
+  if (updateType === 'partial' && existingPRNumber) {
+    return updatePR(octokit, owner, repo, existingPRNumber, parsedResponse)
+  }
 
   // Create a new branch
   const baseBranch = project.githubTargetBranch || "main"
@@ -147,7 +120,7 @@ export async function generatePR(
   })
 
   // Generate AI-powered commit message
-  const commitMessage = await generateCommitComment(parsedResponse, process.env.ANTHROPIC_API_KEY!);
+  const commitMessage = await generateCommitComment(parsedResponse, process.env.ANTHROPIC_API_KEY!)
 
   // Create a commit
   const { data: commit } = await octokit.git.createCommit({
@@ -176,7 +149,7 @@ export async function generatePR(
     const pr = await octokit.pulls.create({
       owner,
       repo,
-      title: generatePRTitle(parsedResponse, branchName),
+      title: parsedResponse.prTitle || `Update for ${branchName}`,
       head: newBranch,
       base: baseBranch,
       body: commitMessage

@@ -20,7 +20,8 @@ export function parseAIResponse(response: string): AIParsedResponse {
       path: path.trim(),
       language: language.trim(),
       content: content.trim(),
-      status: status.trim() as "new" | "modified" | "deleted"
+      status: status.trim() as "new" | "modified" | "deleted",
+      changes: status.trim() === "modified" ? parseChanges(content.trim()) : []
     })
   }
 
@@ -35,7 +36,8 @@ export function parseAIResponse(response: string): AIParsedResponse {
       path: path.trim(),
       language: "",
       content: "",
-      status: "deleted"
+      status: "deleted",
+      changes: []
     })
   }
 
@@ -43,4 +45,23 @@ export function parseAIResponse(response: string): AIParsedResponse {
   const prTitle = prTitleMatch ? prTitleMatch[1].trim() : ""
 
   return { fileList, files, prTitle }
+}
+
+function parseChanges(content: string): { lineNumber: number; type: 'add' | 'remove' | 'modify'; content: string }[] {
+  const lines = content.split('\n')
+  const changes: { lineNumber: number; type: 'add' | 'remove' | 'modify'; content: string }[] = []
+  let lineNumber = 1
+
+  for (const line of lines) {
+    if (line.startsWith('+')) {
+      changes.push({ lineNumber, type: 'add', content: line.slice(1) })
+    } else if (line.startsWith('-')) {
+      changes.push({ lineNumber, type: 'remove', content: line.slice(1) })
+    } else if (line.startsWith('~')) {
+      changes.push({ lineNumber, type: 'modify', content: line.slice(1) })
+    }
+    lineNumber++
+  }
+
+  return changes
 }
