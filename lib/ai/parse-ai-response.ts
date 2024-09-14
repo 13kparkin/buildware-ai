@@ -20,7 +20,8 @@ export function parseAIResponse(response: string): AIParsedResponse {
       path: path.trim(),
       language: language.trim(),
       content: content.trim(),
-      status: status.trim() as "new" | "modified" | "deleted"
+      status: status.trim() as "new" | "modified" | "deleted",
+      changeType: "full" // Default to full change
     })
   }
 
@@ -35,8 +36,32 @@ export function parseAIResponse(response: string): AIParsedResponse {
       path: path.trim(),
       language: "",
       content: "",
-      status: "deleted"
+      status: "deleted",
+      changeType: "full"
     })
+  }
+
+  // Parse partial changes
+  const partialChangeMatches = response.matchAll(
+    /<partial_change>[\s\S]*?<file_path>(.*?)<\/file_path>[\s\S]*?<change_description>([\s\S]*?)<\/change_description>[\s\S]*?<\/partial_change>/g
+  )
+
+  for (const match of partialChangeMatches) {
+    const [_, path, changeDescription] = match
+    const existingFile = files.find(file => file.path === path)
+    if (existingFile) {
+      existingFile.changeType = "partial"
+      existingFile.partialChangeDescription = changeDescription.trim()
+    } else {
+      files.push({
+        path: path.trim(),
+        language: "",
+        content: "",
+        status: "modified",
+        changeType: "partial",
+        partialChangeDescription: changeDescription.trim()
+      })
+    }
   }
 
   const prTitleMatch = response.match(/<pr_title>([\s\S]*?)<\/pr_title>/)

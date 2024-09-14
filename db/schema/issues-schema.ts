@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm"
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, uuid, integer, jsonb } from "drizzle-orm/pg-core"
 import { issueMessagesTable } from "./issue-messages-schema"
 import { issuesToInstructionsTable } from "./issues-to-instructions-schema"
 import { projectsTable } from "./projects-schema"
@@ -15,6 +15,8 @@ export const issuesTable = pgTable("issues", {
   status: text("status").notNull().default("ready"),
   prLink: text("pr_link"),
   prBranch: text("pr_branch"),
+  iterationCount: integer("iteration_count").default(0),
+  changeHistory: jsonb("change_history"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()

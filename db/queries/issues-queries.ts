@@ -53,3 +53,13 @@ export async function deleteIssue(id: string): Promise<void> {
   await db.delete(issuesTable).where(eq(issuesTable.id, id))
   revalidatePath("/")
 }
+
+export async function getIssueChangeHistory(id: string): Promise<any[]> {
+  const issue = await getIssueById(id)
+  return issue?.changeHistory || []
+}
+
+export async function getIssueIterationCount(id: string): Promise<number> {
+  const issue = await getIssueById(id)
+  return issue?.iterationCount || 0
+}

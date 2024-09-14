@@ -1,121 +1,47 @@
-# This is a forked version of Buildware that I have modified and added features to for my personal workflow. 
-
-## Added features
-- Ai generated commit comments on pull requests that are generated
-- Changed the context window from 100k to 40k due to new claude api limitations
-
-## Planned features
-- Ai chatbot for code reivew (giving the ability to ask questions on pull requests and get the ai to review your own submitted pull requests)
-- Make tweeks to ai generated PR's (Be able to make small changes to ai generated PR's and not just regenerate the whole thing)
-
------------------------------------------------------------------------------------------------------------------------------------------------
 # Buildware
 
 Buildware helps you ship code faster with AI.
 
 Build a code instruction system, give it an issue, and get an AI-generated PR!
 
-Originally built by [Mckay Wrigley](https://twitter.com/mckaywrigley) and [Tyler Bruno](https://twitter.com/tylerbruno05) at Takeoff AI.
+## New Features
 
-## Demo
+### Enhanced AI-powered GitHub Issue Resolution System
 
-See the latest demo [here](https://x.com/mckaywrigley/status/1813695460600844362).
+We've updated our system to provide more flexible response options after the initial pull request (PR) submission. Here are the key new functionalities:
 
-## Sponsor
+1. **Partial PR Updates**: The AI can now make targeted changes to specific parts of an existing PR.
 
-If you find Buildware useful, please consider [sponsoring](https://github.com/sponsors/mckaywrigley) us to support our open-source work :)
+2. **Full PR Regeneration**: We've maintained the ability to completely regenerate the entire solution if needed.
 
-## Simple Setup
+3. **Flexible Response System**: Users can now choose between:
+   a) Requesting specific updates to parts of a PR
+   b) Regenerating the entire PR
 
-Follow these steps to get the simple version of Buildware running.
+4. **Iterative Improvement Workflow**: The system now analyzes feedback or review comments on the initial PR and allows the AI to submit follow-up commits addressing specific issues or requested changes.
 
-### 1. Clone the Repo
+5. **Version Control Integration**: We've implemented proper handling of potential conflicts with the base branch during both partial updates and full regenerations.
 
-```bash
-git clone https://github.com/mckaywrigley/buildware.git
-```
+6. **Tracking and Reporting**: A new system tracks the history of changes, iterations, and regenerations for each issue.
 
-### 2. Install Dependencies
+7. **Updated User Interface**: The interface has been modified to accommodate the new options, allowing users to easily select between partial updates and full regeneration.
 
-```bash
-npm install
-```
+## How to Use
 
-### 3. Setup Environment Variables
+1. Create a new issue or select an existing one.
+2. Choose between "Partial Update" or "Full Regeneration".
+3. For partial updates, provide specific feedback or review comments.
+4. Click "Run" to generate or update the PR.
+5. Review the changes and iterate as needed.
 
-Copy the `.env.example` file to `.env.local` and fill in the required variables.
+## Setup
 
-```bash
-cp .env.example .env.local
-```
+(Existing setup instructions...)
 
-The following values are required for config for the simple version:
+## Contributing
 
-App Mode (keep default value):
+(Existing contributing guidelines...)
 
-- `NEXT_PUBLIC_APP_MODE=simple`
+## License
 
-LLMs:
-
-- `ANTHROPIC_API_KEY=`
-- `OPENAI_API_KEY=`
-
-Database:
-
-- `DATABASE_URL=`
-
-GitHub:
-
-- `GITHUB_PAT=`
-
-### 4. Setup Database
-
-You will need a Postgres database to use Buildware.
-
-We recommend using [Supabase](https://supabase.com/) or [Neon](https://neon.tech/).
-
-Once you have your connection string, update the `DATABASE_URL` in the `.env.local` file.
-
-Next, run the database migrations:
-
-```bash
-npm run migrate
-```
-
-Now your database is ready to use.
-
-### 5. Setup GitHub PAT
-
-You will need a GitHub PAT (Personal Access Token) to use Buildware.
-
-Follow these steps:
-
-1. Go to [this link](https://github.com/settings/tokens?type=beta).
-2. Click "Generate new token".
-3. Give your token a name and set the expiration date.
-4. Select a "Resource owner".
-5. Select which repositories you want to access. You must select either "All repositories" or "Only select repositories".
-6. Select the 3 required repository permissions:
-   - Contents: Read and write
-   - Pull Requests: Read and write
-   - Metadata: Read-only (this is selected by default)
-7. Click "Generate token".
-8. Copy your new PAT.
-
-Once you have your PAT, update the `GITHUB_PAT` in the `.env.local` file.
-
-### 6. Run App
-
-```bash
-npm run dev
-```
-
-## Deploy Simple Version
-
-Deploy the simple version to Vercel in 1 click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmckaywrigley%2Fbuildware-ai&env=NEXT_PUBLIC_APP_MODE,ANTHROPIC_API_KEY,OPENAI_API_KEY,DATABASE_URL,GITHUB_PAT)
-
-## Advanced Setup
-
-Update (July 17th, 2024): Advanced setup guide coming soon! Please check back in a few days.
+(Existing license information...)

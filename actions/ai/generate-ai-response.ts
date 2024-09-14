@@ -7,13 +7,17 @@ import Anthropic from "@anthropic-ai/sdk"
 const anthropic = new Anthropic()
 
 export const generateAIResponse = async (
-  messages: Anthropic.Messages.MessageParam[]
+  messages: Anthropic.Messages.MessageParam[],
+  updateType: 'partial' | 'full' = 'full'
 ) => {
+  const systemMessage = updateType === 'partial'
+    ? "You are a helpful assistant that can answer questions and help with tasks. Focus on making targeted changes based on the given feedback."
+    : "You are a helpful assistant that can answer questions and help with tasks."
+
   const message = await anthropic.messages.create(
     {
       model: "claude-3-5-sonnet-20240620",
-      system:
-        "You are a helpful assistant that can answer questions and help with tasks.",
+      system: systemMessage,
       messages,
       max_tokens: BUILDWARE_MAX_OUTPUT_TOKENS
     },
