@@ -19,7 +19,8 @@ export const issuesTable = pgTable("issues", {
   updatedAt: timestamp("updated_at")
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date()),
+  lastUpdateMode: text("last_update_mode").default("full")
 })
 
 export const issuesRelations = relations(issuesTable, ({ one, many }) => ({

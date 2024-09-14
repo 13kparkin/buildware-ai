@@ -7,12 +7,10 @@ import { generateBranchName } from "@/lib/utils/branch-utils"
 import { generateCommitComment } from "./generate-commit-comment"
 
 function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): string {
-    // If a custom PR title is provided, return it without modification
     if (parsedResponse.prTitle) {
       return parsedResponse.prTitle;
     }
   
-    // Check for indicators of change type in the parsed response
     const isFeature = parsedResponse.files.some(file => 
       file.content.toLowerCase().includes('new feature') || 
       file.content.toLowerCase().includes('enhancement')
@@ -22,7 +20,7 @@ function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): 
       file.content.toLowerCase().includes('fixes issue')
     );
   
-    let prefix = 'update:'; // Default prefix
+    let prefix = 'update:';
   
     if (isFeature) {
       prefix = 'feature:';
@@ -36,22 +34,23 @@ function generatePRTitle(parsedResponse: AIParsedResponse, branchName: string): 
       prefix = 'test:';
     }
   
-    // Generate a generic title if no custom title is provided
     return `${prefix} Update for ${branchName}`;
 }
 
 export async function generatePR(
   branchName: string,
   project: SelectProject,
-  parsedResponse: AIParsedResponse
+  parsedResponse: AIParsedResponse,
+  updateMode: "full" | "partial",
+  existingPRLink: string | null,
+  existingBranchName: string | null
 ): Promise<{ prLink: string | null; branchName: string }> {
   const octokit = await getAuthenticatedOctokit(project.githubInstallationId!)
   const [owner, repo] = project.githubRepoFullName!.split("/")
 
-  // Create a new branch
   const baseBranch = project.githubTargetBranch || "main"
   const timestamp = Date.now()
-  let newBranch = generateBranchName(project.name, branchName, timestamp)
+  let newBranch = existingBranchName || generateBranchName(project.name, branchName, timestamp)
   let baseRef: any
 
   try {
@@ -61,12 +60,14 @@ export async function generatePR(
       ref: `heads/${baseBranch}`
     })
 
-    await octokit.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${newBranch}`,
-      sha: baseRef.data.object.sha
-    })
+    if (!existingBranchName) {
+      await octokit.git.createRef({
+        owner,
+        repo,
+        ref: `refs/heads/${newBranch}`,
+        sha: baseRef.data.object.sha
+      })
+    }
   } catch (error: any) {
     if (error.status === 422) {
       const retryBranch = generateBranchName(project.name, branchName, `${timestamp}-retry`)
@@ -89,13 +90,11 @@ export async function generatePR(
     }
   }
 
-  // Prepare changes
   const changes = []
   for (const file of parsedResponse.files) {
     if (file.status === "new" || file.status === "modified") {
       if (file.status === "modified") {
         try {
-          // Fetch the current file to get its SHA
           const { data: existingFile } = await octokit.repos.getContent({
             owner,
             repo,
@@ -109,7 +108,6 @@ export async function generatePR(
         } catch (error: any) {
           if (error.status === 404) {
             console.warn(`File not found: ${file.path}. Treating as new file.`)
-            // Treat as a new file if it doesn't exist
             file.status = "new"
           } else {
             throw error
@@ -133,7 +131,6 @@ export async function generatePR(
     }
   }
 
-  // Create a tree with all changes
   if (changes.length === 0) {
     console.warn("No changes to commit. Skipping PR creation.")
     return { prLink: null, branchName: newBranch }
@@ -146,10 +143,8 @@ export async function generatePR(
     tree: changes
   })
 
-  // Generate AI-powered commit message
   const commitMessage = await generateCommitComment(parsedResponse, process.env.ANTHROPIC_API_KEY!);
 
-  // Create a commit
   const { data: commit } = await octokit.git.createCommit({
     owner,
     repo,
@@ -158,7 +153,6 @@ export async function generatePR(
     parents: [baseRef.data.object.sha]
   })
 
-  // Update the branch reference
   await octokit.git.updateRef({
     owner,
     repo,
@@ -166,11 +160,24 @@ export async function generatePR(
     sha: commit.sha
   })
 
-  // Create PR
   try {
     if (!commit) {
       console.warn("No commit created. Skipping PR creation.")
       return { prLink: null, branchName: newBranch }
+    }
+
+    if (existingPRLink && updateMode === "partial") {
+      const prNumber = parseInt(existingPRLink.split("/").pop() || "", 10)
+      if (!isNaN(prNumber)) {
+        await octokit.pulls.update({
+          owner,
+          repo,
+          pull_number: prNumber,
+          title: generatePRTitle(parsedResponse, branchName),
+          body: commitMessage
+        })
+        return { prLink: existingPRLink, branchName: newBranch }
+      }
     }
 
     const pr = await octokit.pulls.create({
@@ -184,7 +191,7 @@ export async function generatePR(
 
     return { prLink: pr.data.html_url, branchName: newBranch }
   } catch (error: any) {
-    console.error("Failed to create PR:", error)
+    console.error("Failed to create or update PR:", error)
     return { prLink: null, branchName: newBranch }
   }
 }

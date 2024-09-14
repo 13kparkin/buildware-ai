@@ -26,6 +26,8 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 import {
   createIssueMessageRecord,
   deleteIssue,
@@ -77,6 +79,7 @@ export const IssueView: React.FC<IssueViewProps> = ({
   } | null>(null)
   const [isRunning, setIsRunning] = React.useState(false)
   const [messages, setMessages] = useState<SelectIssueMessage[]>([])
+  const [updateMode, setUpdateMode] = useState<"full" | "partial">("full")
 
   const sequenceRef = useRef(globalSequence)
 
@@ -188,7 +191,8 @@ export const IssueView: React.FC<IssueViewProps> = ({
           content: file.content ?? ""
         })),
         plan: aiCodePlanResponse,
-        instructionsContext
+        instructionsContext,
+        updateMode
       })
 
       const aiCodeGenResponse = await generateAIResponse([
@@ -200,7 +204,10 @@ export const IssueView: React.FC<IssueViewProps> = ({
       const { prLink, branchName } = await generatePR(
         generateBranchName(project.name, issue.name),
         project,
-        parsedAIResponse
+        parsedAIResponse,
+        updateMode,
+        issue.prLink,
+        issue.prBranch
       )
 
       await updateIssue(issue.id, {
@@ -308,6 +315,23 @@ export const IssueView: React.FC<IssueViewProps> = ({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </div>
+
+      <div className="mb-4">
+        <RadioGroup
+          defaultValue="full"
+          onValueChange={(value) => setUpdateMode(value as "full" | "partial")}
+          className="flex flex-row space-x-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="full" id="full" />
+            <Label htmlFor="full">Full Regeneration</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="partial" id="partial" />
+            <Label htmlFor="partial">Partial Update</Label>
+          </div>
+        </RadioGroup>
       </div>
 
       {attachedInstructions.length > 0 && (

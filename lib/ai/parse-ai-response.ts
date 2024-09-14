@@ -24,7 +24,6 @@ export function parseAIResponse(response: string): AIParsedResponse {
     })
   }
 
-  // Handle deleted files (which don't have content)
   const deletedFileMatches = response.matchAll(
     /<file>[\s\S]*?<file_path>(.*?)<\/file_path>[\s\S]*?<file_status>deleted<\/file_status>[\s\S]*?<\/file>/g
   )
