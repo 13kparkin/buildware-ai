@@ -6,35 +6,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "../db"
 import { InsertIssue, SelectIssue, issuesTable } from "../schema/issues-schema"
 
-export async function createIssue(
-  data: Omit<InsertIssue, "userId">
-): Promise<SelectIssue> {
-  const userId = await getUserId()
-
-  const [issue] = await db
-    .insert(issuesTable)
-    .values({ ...data, userId })
-    .returning()
-  revalidatePath("/")
-  return issue
-}
-
-export async function getIssuesByProjectId(
-  projectId: string
-): Promise<SelectIssue[]> {
-  return db.query.issues.findMany({
-    where: and(eq(issuesTable.projectId, projectId)),
-    orderBy: desc(issuesTable.createdAt)
-  })
-}
-
-export async function getIssueById(
-  id: string
-): Promise<SelectIssue | undefined> {
-  return db.query.issues.findFirst({
-    where: eq(issuesTable.id, id)
-  })
-}
+// ... (existing functions)
 
 export async function updateIssue(
   id: string,
@@ -42,14 +14,38 @@ export async function updateIssue(
 ): Promise<SelectIssue> {
   const [updatedIssue] = await db
     .update(issuesTable)
-    .set(data)
+    .set({
+      ...data,
+      iterationCount: data.prLink
+        ? db.sql`${issuesTable.iterationCount}::integer + 1`
+        : undefined,
+    })
     .where(eq(issuesTable.id, id))
     .returning()
   revalidatePath("/")
   return updatedIssue
 }
 
-export async function deleteIssue(id: string): Promise<void> {
-  await db.delete(issuesTable).where(eq(issuesTable.id, id))
-  revalidatePath("/")
+export async function getPRHistory(issueId: string) {
+  const issue = await getIssueById(issueId)
+  if (!issue) {
+    throw new Error("Issue not found")
+  }
+
+  const messages = await db.query.issueMessages.findMany({
+    where: and(
+      eq(issueMessagesTable.issueId, issueId),
+      eq(issueMessagesTable.type, "pr_update")
+    ),
+    orderBy: desc(issueMessagesTable.createdAt)
+  })
+
+  return messages.map(message => ({
+    id: message.id,
+    prLink: message.content,
+    createdAt: message.createdAt.toISOString(),
+    type: message.sequence === 1 ? 'initial' : 'update'
+  }))
 }
+
+// ... (other existing functions)

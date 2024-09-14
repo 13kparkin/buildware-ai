@@ -15,6 +15,8 @@ export const issuesTable = pgTable("issues", {
   status: text("status").notNull().default("ready"),
   prLink: text("pr_link"),
   prBranch: text("pr_branch"),
+  latestPRNumber: text("latest_pr_number"),
+  iterationCount: text("iteration_count").notNull().default("0"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
